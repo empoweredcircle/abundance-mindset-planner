@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#7B4BBF" />
+  <meta name="description" content="A daily mindset planner inspired by neuroscience. Train your brain toward abundance, opportunity, and growth — one day at a time." />
+  <meta property="og:title" content="Abundance Mindset Daily Planner" />
+  <meta property="og:description" content="A daily mindset planner inspired by neuroscience." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Abundance" />
+  <title>Abundance Mindset Planner</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #F2F4F8; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React via CDN — no build step needed -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel to handle JSX in the browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script>
+    // localStorage shim matching window.storage API
+    window.storage = {
+      get: async function(key) {
+        var value = localStorage.getItem(key);
+        if (value === null) throw new Error("Not found");
+        return { key: key, value: value };
+      },
+      set: async function(key, value) {
+        localStorage.setItem(key, value);
+        return { key: key, value: value };
+      },
+      delete: async function(key) {
+        localStorage.removeItem(key);
+        return { key: key, deleted: true };
+      },
+      list: async function(prefix) {
+        prefix = prefix || "";
+        var keys = Object.keys(localStorage).filter(function(k) { return k.startsWith(prefix); });
+        return { keys: keys };
+      }
+    };
+  </script>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useRef } = React;
+
+
+const MOOD_LEVELS = [
+  { label: "Emerging", emoji: "🌱", color: "#78909C", light: "#ECEFF1" },
+  { label: "Building", emoji: "⚡", color: "#00897B", light: "#E0F2F1" },
+  { label: "Flowing", emoji: "✨", color: "#1E88E5", light: "#E3F2FD" },
+  { label: "Thriving", emoji: "🔥", color: "#F57C00", light: "#FFF3E0" },
+  { label: "Radiant", emoji: "🌟", color: "#8E24AA", light: "#F3E5F5" },
+];
+
+const INTENTION_EXAMPLES = {
+  "💼 Career & Abundance": {
+    color: "#F57C00", light: "#FFF8F0",
+    examples: [
+      "be recognized for my contributions at work",
+      "connect with someone who shares my professional vision",
+      "find a creative solution to a problem I've been avoiding",
+      "add unexpected value in a meeting or conversation",
+      "notice where money is already flowing freely in my life",
+      "spot an opening that others might overlook",
+    ]
+  },
+  "🤝 Relationships": {
+    color: "#00897B", light: "#F0FAFA",
+    examples: [
+      "deepen trust with someone I care about",
+      "be genuinely present in every conversation today",
+      "express appreciation to someone who deserves it",
+      "meet someone new who expands my world",
+      "give generously without expecting anything in return",
+      "notice the kindness that already surrounds me",
+    ]
+  },
+  "🌱 Growth & Learning": {
+    color: "#1E88E5", light: "#F0F7FF",
+    examples: [
+      "learn something new from an unexpected source",
+      "reframe a setback as information rather than failure",
+      "step slightly outside my comfort zone",
+      "notice how far I've already come",
+      "ask a question I've been afraid to ask",
+      "practice curiosity instead of judgment",
+    ]
+  },
+  "✨ Wellbeing & Joy": {
+    color: "#8E24AA", light: "#FCF5FF",
+    examples: [
+      "pause and appreciate beauty in ordinary moments",
+      "nourish my body with something that feels good",
+      "laugh or feel genuine lightness today",
+      "notice when I feel fully alive and present",
+      "create something — even something small",
+      "move my body in a way that feels joyful",
+    ]
+  },
+};
+
+const GLOSSARY = [
+  { term: "Neuroplasticity", def: "The brain's ability to reorganize itself by forming new neural connections. Repeated thoughts and behaviors physically rewire your brain over time." },
+  { term: "RAS", full: "Reticular Activating System", def: "A brain stem filter that decides what information reaches your conscious awareness. Train it toward abundance and it will surface opportunities already around you." },
+  { term: "Default Mode Network", def: "Your brain's idle state. Left unmanaged, it defaults to rumination and threat-scanning — reinforcing scarcity thinking." },
+  { term: "Dopamine Loop", def: "Positive expectation triggers dopamine, which motivates action, which creates reward, which generates more positive expectation. A self-reinforcing cycle." },
+  { term: "Identity-Based Framing", def: "Anchoring habits to your self-concept ('I am someone who...') is more durable than goal-setting because it rewires who you believe you are." },
+  { term: "Neural Pathway", def: "A series of connected neurons that fire together. The more you repeat a thought pattern, the stronger and more automatic the pathway becomes." },
+];
+
+const todayKey = () => new Date().toISOString().split("T")[0];
+
+function useStorage(key, defaultValue) {
+  const [value, setValue] = useState(defaultValue);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    (async () => {
+      try {
+        const result = await window.storage.get(key);
+        if (result) setValue(JSON.parse(result.value));
+      } catch {}
+      setLoaded(true);
+    })();
+  }, [key]);
+  const set = async (newVal) => {
+    const v = typeof newVal === "function" ? newVal(value) : newVal;
+    setValue(v);
+    try { await window.storage.set(key, JSON.stringify(v)); } catch {}
+  };
+  return [value, set, loaded];
+}
+
+function BreathTimer() {
+  const [phase, setPhase] = useState("idle");
+  const [count, setCount] = useState(0);
+  const [breathsDone, setBreathsDone] = useState(0);
+  const [phaseIdx, setPhaseIdx] = useState(0);
+  const intervalRef = useRef(null);
+  const phases = [
+    { name: "Inhale", duration: 4, color: "#00897B" },
+    { name: "Hold", duration: 2, color: "#7B4BBF" },
+    { name: "Exhale", duration: 6, color: "#1E88E5" },
+  ];
+
+  const stop = () => { clearInterval(intervalRef.current); setPhase("idle"); setCount(0); setPhaseIdx(0); };
+  const start = () => {
+    setPhase("running"); setPhaseIdx(0); setCount(phases[0].duration); setBreathsDone(0);
+    let cp = 0, cc = phases[0].duration, b = 0;
+    intervalRef.current = setInterval(() => {
+      cc--;
+      if (cc <= 0) {
+        cp = (cp + 1) % 3;
+        if (cp === 0) { b++; setBreathsDone(b); if (b >= 5) { clearInterval(intervalRef.current); setPhase("done"); return; } }
+        cc = phases[cp].duration; setPhaseIdx(cp);
+      }
+      setCount(cc);
+    }, 1000);
+  };
+  useEffect(() => () => clearInterval(intervalRef.current), []);
+
+  const cur = phases[phaseIdx];
+  const prog = phase === "running" ? ((phases[phaseIdx].duration - count) / phases[phaseIdx].duration) * 100 : 0;
+  const r = 54, circ = 2 * Math.PI * r;
+
+  return (
+    <div style={{ textAlign: "center", padding: "16px 0 8px" }}>
+      <svg width={120} height={120} style={{ display: "block", margin: "0 auto 16px" }}>
+        <circle cx={60} cy={60} r={r} fill="none" stroke="#F0F0F0" strokeWidth={6} />
+        {phase === "running" && (
+          <circle cx={60} cy={60} r={r} fill="none" stroke={cur.color} strokeWidth={6}
+            strokeDasharray={circ} strokeDashoffset={circ * (1 - prog / 100)}
+            strokeLinecap="round" transform="rotate(-90 60 60)"
+            style={{ transition: "stroke-dashoffset 0.9s linear" }} />
+        )}
+        <text x={60} y={phase === "running" ? 55 : 65} textAnchor="middle"
+          style={{ fontSize: phase === "running" ? 26 : 34, fontWeight: 700, fill: phase === "running" ? cur.color : "#CCCCCC", fontFamily: "sans-serif" }}>
+          {phase === "idle" ? "🫁" : phase === "done" ? "✅" : count}
+        </text>
+        {phase === "running" && (
+          <text x={60} y={74} textAnchor="middle" style={{ fontSize: 15, fill: cur.color, fontFamily: "sans-serif", letterSpacing: 1 }}>
+            {cur.name.toUpperCase()}
+          </text>
+        )}
+      </svg>
+      {phase === "running" && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 14 }}>
+          {[...Array(5)].map((_, i) => (
+            <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: i < breathsDone ? "#00897B" : "#E0E0E0", transition: "background 0.3s" }} />
+          ))}
+        </div>
+      )}
+      {phase === "done" && <p style={{ color: "#00897B", marginBottom: 14, fontSize: 15, fontWeight: 600 }}>5 breaths complete ✓</p>}
+      <button onClick={phase === "idle" || phase === "done" ? start : stop} style={{
+        padding: "10px 28px", borderRadius: 24, border: "none", cursor: "pointer",
+        fontSize: 15, fontWeight: 700, letterSpacing: 0.5,
+        background: phase === "running" ? "#FFEBEE" : "#E8F5E9",
+        color: phase === "running" ? "#C62828" : "#2E7D32",
+      }}>
+        {phase === "idle" ? "START" : phase === "running" ? "STOP" : "AGAIN"}
+      </button>
+    </div>
+  );
+}
+
+function Field({ label, value, onChange, placeholder, rows = 2, accent = "#7B4BBF" }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ marginBottom: 14 }}>
+      {label && <label style={{ display: "block", fontSize: 15, fontWeight: 700, letterSpacing: 1.5, color: accent, textTransform: "uppercase", marginBottom: 5 }}>{label}</label>}
+      <textarea value={value || ""} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows}
+        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        style={{
+          width: "100%", background: focused ? "#FAFAFA" : "#F8F8F8",
+          border: `1.5px solid ${focused ? accent : "#EBEBEB"}`,
+          borderRadius: 10, padding: "11px 13px", color: "#222",
+          fontSize: 16, fontFamily: "'DM Sans', sans-serif",
+          resize: "none", outline: "none", lineHeight: 1.7, boxSizing: "border-box", transition: "all 0.2s",
+        }} />
+    </div>
+  );
+}
+
+function Card({ children, style = {} }) {
+  return <div style={{ background: "#fff", borderRadius: 16, padding: "18px 16px", marginBottom: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", ...style }}>{children}</div>;
+}
+
+function StepLabel({ number, label, accent }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+      {number && <div style={{ width: 26, height: 26, borderRadius: "50%", background: accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff", flexShrink: 0 }}>{number}</div>}
+      <span style={{ fontSize: 14, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: 1.5 }}>{label}</span>
+    </div>
+  );
+}
+
+function ScienceNote({ text, accent, bg }) {
+  return (
+    <Card style={{ background: bg, boxShadow: "none", border: `1px solid ${accent}22`, marginBottom: 14 }}>
+      <p style={{ margin: 0, fontSize: 15, color: "#444", lineHeight: 1.7 }}>
+        <span style={{ fontWeight: 700, color: accent }}>🧠 Inspired by: </span>{text}
+      </p>
+    </Card>
+  );
+}
+
+function SectionHeader({ emoji, title, subtitle, color }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 28 }}>{emoji}</span>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#1A1A2E", fontFamily: "'DM Serif Display', serif" }}>{title}</h2>
+          <p style={{ margin: 0, fontSize: 14, color: "#666", letterSpacing: 0.3 }}>{subtitle}</p>
+        </div>
+      </div>
+      <div style={{ height: 3, background: color, borderRadius: 2, marginTop: 12 }} />
+    </div>
+  );
+}
+
+function MoodPicker({ value, onChange }) {
+  return (
+    <div style={{ display: "flex", gap: 6 }}>
+      {MOOD_LEVELS.map(m => (
+        <button key={m.label} onClick={() => onChange(m.label)} style={{
+          flex: 1, padding: "10px 2px", borderRadius: 12,
+          border: `2px solid ${value === m.label ? m.color : "#EEEEEE"}`,
+          background: value === m.label ? m.light : "#FAFAFA",
+          cursor: "pointer", display: "flex", flexDirection: "column",
+          alignItems: "center", gap: 4, transition: "all 0.15s",
+        }}>
+          <span style={{ fontSize: 18 }}>{m.emoji}</span>
+          <span style={{ fontSize: 15, color: value === m.label ? m.color : "#BDBDBD", fontWeight: 700, letterSpacing: 0.3 }}>{m.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+
+
+function OnboardingPage({ onChoose }) {
+  const [selected, setSelected] = useState(null);
+  return (
+    <div style={{ padding: "8px 0" }}>
+      <div style={{ textAlign: "center", marginBottom: 28 }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>🌅</div>
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: "#1A1A2E", fontFamily: "'DM Serif Display', serif", margin: "0 0 10px", lineHeight: 1.2 }}>
+          How are your mornings?
+        </h2>
+        <p style={{ fontSize: 16, color: "#444", lineHeight: 1.7, margin: 0 }}>
+          Choose the version that fits your schedule. You can change this any time from the Home tab.
+        </p>
+      </div>
+
+      {[
+        {
+          id: "quick",
+          emoji: "⚡",
+          title: "Quick Start",
+          time: "5 min morning · 15 min evening",
+          desc: "One gratitude and your RAS intention in the morning — fast enough for the busiest days. Visualization moves to the evening, where research suggests it may be even more effective close to sleep.",
+          tag: "Most popular for busy mornings",
+          tagColor: "#00897B",
+          tagBg: "#E0F2F1",
+          border: "#00897B",
+          bg: "#F0FAFA",
+        },
+        {
+          id: "full",
+          emoji: "🌿",
+          title: "Full Practice",
+          time: "15–20 min morning · 10 min evening",
+          desc: "Three gratitudes, a full visualization, your intention, and a mood check-in — the complete morning immersion for days when you have the time and want to go deep.",
+          tag: "Best for slow mornings",
+          tagColor: "#7B4BBF",
+          tagBg: "#EDE7F6",
+          border: "#7B4BBF",
+          bg: "#F5F0FF",
+        },
+      ].map(opt => (
+        <button key={opt.id} onClick={() => setSelected(opt.id)} style={{
+          width: "100%", textAlign: "left", background: selected === opt.id ? opt.bg : "#fff",
+          border: `2px solid ${selected === opt.id ? opt.border : "#E8E8E8"}`,
+          borderRadius: 16, padding: "18px 18px", marginBottom: 14, cursor: "pointer",
+          transition: "all 0.15s", boxShadow: selected === opt.id ? `0 0 0 4px ${opt.border}22` : "0 1px 4px rgba(0,0,0,0.06)",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 26 }}>{opt.emoji}</span>
+              <div>
+                <p style={{ fontSize: 17, fontWeight: 800, color: "#1A1A2E", margin: 0 }}>{opt.title}</p>
+                <p style={{ fontSize: 13, color: "#666", margin: "2px 0 0" }}>{opt.time}</p>
+              </div>
+            </div>
+            <div style={{
+              width: 22, height: 22, borderRadius: "50%", border: `2px solid ${selected === opt.id ? opt.border : "#CCCCCC"}`,
+              background: selected === opt.id ? opt.border : "transparent", flexShrink: 0, marginTop: 2,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              {selected === opt.id && <span style={{ color: "#fff", fontSize: 13, fontWeight: 800 }}>✓</span>}
+            </div>
+          </div>
+          <p style={{ fontSize: 14, color: "#444", lineHeight: 1.6, margin: "0 0 10px" }}>{opt.desc}</p>
+          <span style={{ fontSize: 12, fontWeight: 700, color: opt.tagColor, background: opt.tagBg, padding: "3px 10px", borderRadius: 20 }}>{opt.tag}</span>
+        </button>
+      ))}
+
+      <button
+        onClick={() => selected && onChoose(selected)}
+        disabled={!selected}
+        style={{
+          width: "100%", padding: "16px", borderRadius: 14, border: "none", cursor: selected ? "pointer" : "default",
+          background: selected ? "linear-gradient(135deg, #7B4BBF, #1565C0)" : "#E8E8E8",
+          color: selected ? "#fff" : "#AAAAAA", fontSize: 17, fontWeight: 800,
+          boxShadow: selected ? "0 4px 16px rgba(123,75,191,0.3)" : "none",
+          transition: "all 0.2s", marginTop: 4,
+        }}
+      >
+        {selected ? "Start My Practice →" : "Choose a version above"}
+      </button>
+    </div>
+  );
+}
+
+function SettingsCard({ mode, onChangeMode }) {
+  return (
+    <Card style={{ border: "1px solid #E8E8E8" }}>
+      <StepLabel label="Practice Mode" accent="#7B4BBF" />
+      <p style={{ fontSize: 14, color: "#444", lineHeight: 1.6, margin: "0 0 14px" }}>
+        Currently using: <strong style={{ color: "#7B4BBF" }}>{mode === "full" ? "🌿 Full Practice (15–20 min morning)" : "⚡ Quick Start (5 min morning)"}</strong>
+      </p>
+      <div style={{ display: "flex", gap: 10 }}>
+        {[
+          { id: "quick", label: "⚡ Quick Start", color: "#00897B", bg: "#E0F2F1" },
+          { id: "full",  label: "🌿 Full Practice", color: "#7B4BBF", bg: "#EDE7F6" },
+        ].map(opt => (
+          <button key={opt.id} onClick={() => onChangeMode(opt.id)} style={{
+            flex: 1, padding: "10px 8px", borderRadius: 10, border: `2px solid ${mode === opt.id ? opt.color : "#E8E8E8"}`,
+            background: mode === opt.id ? opt.bg : "#FAFAFA", cursor: "pointer",
+            fontSize: 14, fontWeight: 700, color: mode === opt.id ? opt.color : "#888",
+            transition: "all 0.15s",
+          }}>
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function IntroPage({ onStart, mode, onChangeMode }) {
+  return (
+    <div>
+      <div style={{ background: "linear-gradient(160deg, #EDE7F6 0%, #E3F2FD 100%)", borderRadius: 20, padding: "32px 24px 28px", marginBottom: 20, textAlign: "center" }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>🧠✨</div>
+        <h2 style={{ fontSize: 26, fontWeight: 800, color: "#1A1A2E", fontFamily: "'DM Serif Display', serif", margin: "0 0 10px", lineHeight: 1.2 }}>Abundance Mindset Daily Planner</h2>
+        <p style={{ fontSize: 16, color: "#444", lineHeight: 1.7, margin: 0 }}>A practice inspired by neuroscience for training your brain to notice opportunity, build resilience, and attract abundance — one day at a time.</p>
+      </div>
+      <Card>
+        <h3 style={{ fontSize: 16, fontWeight: 800, color: "#1A1A2E", margin: "0 0 16px" }}>How This Planner Works</h3>
+        <p style={{ fontSize: 15, color: "#444", lineHeight: 1.7, margin: "0 0 16px" }}>
+          Your brain changes through <strong>repetition, emotion, and specificity</strong>. Each day complete three short sessions that activate neural pathways oriented toward growth and abundance.
+        </p>
+        {[
+          { emoji: "🌅", tab: "Morning", time: "15–20 min", desc: "Prime your Reticular Activating System to filter for opportunity all day long.", color: "#7B4BBF" },
+          { emoji: "☀️", tab: "Midday", time: "5 min", desc: "Interrupt your brain's default negativity bias and lower cortisol with a quick reset.", color: "#00897B" },
+          { emoji: "🌙", tab: "Evening", time: "10 min", desc: "Review evidence of abundance before sleep — when memory consolidation is strongest.", color: "#E65100" },
+          { emoji: "📊", tab: "Weekly", time: "20–30 min", desc: "Track patterns, wins, and growth to reinforce new neural beliefs over time.", color: "#1565C0" },
+        ].map(({ emoji, tab, time, desc, color }) => (
+          <div key={tab} style={{ display: "flex", gap: 14, paddingBottom: 14, marginBottom: 14, borderBottom: "1px solid #F0F0F0" }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{emoji}</div>
+            <div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color }}>{tab}</span>
+                <span style={{ fontSize: 13, color: "#666" }}>{time}</span>
+              </div>
+              <p style={{ fontSize: 14, color: "#444", lineHeight: 1.6, margin: 0 }}>{desc}</p>
+            </div>
+          </div>
+        ))}
+        <p style={{ fontSize: 14, color: "#444", lineHeight: 1.7, margin: 0 }}>
+          Allow <strong>30–90 days</strong> of consistent practice before the new patterns feel truly automatic.
+        </p>
+      </Card>
+      <Card style={{ background: "#F5F0FF", boxShadow: "none" }}>
+        <h3 style={{ fontSize: 15, fontWeight: 800, color: "#5E35B1", margin: "0 0 12px" }}>3 Principles Inspired by Neuroscience</h3>
+        {[
+          ["Neuroplasticity", "Your brain physically rewires itself based on repeated thoughts. Every session strengthens new positive pathways."],
+          ["The RAS Filter", "Your Reticular Activating System decides what you notice. Train it and it starts surfacing opportunities already around you."],
+          ["Dopamine Loops", "Positive expectation creates reward cycles. The more you practice, the more natural abundance thinking becomes."],
+        ].map(([term, def]) => (
+          <div key={term} style={{ marginBottom: 12 }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: "#5E35B1" }}>{term} — </span>
+            <span style={{ fontSize: 14, color: "#444", lineHeight: 1.6 }}>{def}</span>
+          </div>
+        ))}
+      </Card>
+      <Card style={{ background: "#FFFBF0", border: "1px solid #FFE082", boxShadow: "none" }}>
+        <p style={{ fontSize: 15, color: "#444", lineHeight: 1.7, margin: 0 }}>
+          📖 <strong style={{ color: "#E65100" }}>New here?</strong> The <strong>Guide tab</strong> has the full glossary of concepts and dozens of real example intentions to fill in your daily prompts.
+        </p>
+      </Card>
+      <button onClick={onStart} style={{
+        width: "100%", padding: "16px", borderRadius: 14, border: "none", cursor: "pointer",
+        background: "linear-gradient(135deg, #7B4BBF, #1565C0)",
+        color: "#fff", fontSize: 17, fontWeight: 800,
+        boxShadow: "0 4px 16px rgba(123,75,191,0.3)", marginTop: 8,
+      }}>
+        Start Today's Morning Session →
+      </button>
+      <div style={{ marginTop: 24 }}>
+        <SettingsCard mode={mode} onChangeMode={onChangeMode} />
+      </div>
+    </div>
+  );
+}
+
+function GuideNudge({ onGoToGuide }) {
+  return (
+    <div style={{ background: "#FFFBF0", border: "1px solid #FFE082", borderRadius: 14, padding: "14px 16px", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <p style={{ fontSize: 14, color: "#444", lineHeight: 1.6, margin: 0 }}>
+        📖 Need intention ideas or definitions? The <strong>Guide tab</strong> has examples for every life area.
+      </p>
+      <button onClick={onGoToGuide} style={{ flexShrink: 0, padding: "8px 14px", borderRadius: 20, border: "none", cursor: "pointer", background: "#F57C00", color: "#fff", fontSize: 13, fontWeight: 700 }}>
+        Open Guide
+      </button>
+    </div>
+  );
+}
+
+function MorningPage({ data, setData, onGuide, mode }) {
+  const s = k => v => setData(d => ({ ...d, [k]: v }));
+  const accent = "#7B4BBF";
+  const isFull = mode === "full";
+  return (
+    <div>
+      <SectionHeader
+        emoji="🌅"
+        title="Morning Session"
+        subtitle={isFull ? "15–20 min · Prime your RAS" : "5 min · Quick RAS prime"}
+        color={accent}
+      />
+      <ScienceNote accent={accent} bg="#F5F0FF" text={
+        isFull
+          ? "Your Reticular Activating System primes what your brain notices all day. These practices directly program it toward abundance and opportunity."
+          : "Your RAS is most effectively primed at the start of the day. A focused intention and one grounding gratitude is all you need to set your day's mental direction."
+      } />
+
+      <Card>
+        <StepLabel number="1" label={isFull ? "Gratitude Scan" : "One Gratitude"} accent={accent} />
+        <p style={{ fontSize: 14, color: "#444", margin: "0 0 12px", lineHeight: 1.5 }}>
+          {isFull ? "Write 3 specific things you're grateful for. Be specific — detail activates deeper emotional processing." : "Write one specific thing you're grateful for right now. Specificity matters more than quantity."}
+        </p>
+        {isFull
+          ? [1,2,3].map(i => <Field key={i} label={`Gratitude ${i}`} value={data[`g${i}`]} onChange={s(`g${i}`)} placeholder="I'm grateful for..." accent={accent} />)
+          : <Field label="Gratitude" value={data.g1} onChange={s("g1")} placeholder="I'm grateful for..." accent={accent} rows={2} />
+        }
+      </Card>
+
+      {isFull && (
+        <Card>
+          <StepLabel number="2" label="Abundance Visualization" accent={accent} />
+          <p style={{ fontSize: 14, color: "#444", margin: "0 0 12px", lineHeight: 1.5 }}>Imagine one goal as already achieved. Engage all 5 senses, then describe it:</p>
+          <Field value={data.viz} onChange={s("viz")} placeholder="I can see... I can feel... I can hear..." accent={accent} rows={4} />
+        </Card>
+      )}
+
+      <Card>
+        <StepLabel number={isFull ? "3" : "2"} label="RAS Intention" accent={accent} />
+        <p style={{ fontSize: 14, color: "#444", margin: "0 0 12px", lineHeight: 1.5 }}>A specific intention is a direct instruction to your RAS — it filters your attention all day.</p>
+        <div style={{ background: "#F8F4FF", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${accent}33` }}>
+          <div style={{ background: accent, padding: "9px 13px", fontSize: 14, fontWeight: 700, color: "#fff" }}>Today I will notice opportunities to...</div>
+          <textarea value={data.intention || ""} onChange={e => s("intention")(e.target.value)} placeholder="write your intention here" rows={2}
+            style={{ width: "100%", background: "transparent", border: "none", padding: "11px 13px", color: "#111", fontSize: 16, fontFamily: "'DM Sans', sans-serif", resize: "none", outline: "none", lineHeight: 1.7, boxSizing: "border-box" }} />
+        </div>
+      </Card>
+
+      <Card>
+        <StepLabel number={isFull ? "4" : "3"} label="Morning Mood" accent={accent} />
+        <MoodPicker value={data.mood} onChange={s("mood")} />
+      </Card>
+      <GuideNudge onGoToGuide={onGuide} />
+    </div>
+  );
+}
+
+function MiddayPage({ data, setData, onGuide }) {
+  const s = k => v => setData(d => ({ ...d, [k]: v }));
+  const accent = "#00897B";
+  return (
+    <div>
+      <SectionHeader emoji="☀️" title="Midday Check-In" subtitle="5 min · Interrupt the default" color={accent} />
+      <ScienceNote accent={accent} bg="#F0FAFA" text="Your Default Mode Network idles toward threat-scanning. A quick midday pause interrupts that pattern and builds the habit of spontaneous positive noticing." />
+      <Card>
+        <StepLabel number="5" label="Pattern Interrupt" accent={accent} />
+        <Field label="One thing that went well this morning" value={data.well} onChange={s("well")} placeholder="Something good happened..." accent={accent} rows={3} />
+        <Field label="How does noticing this shift your energy?" value={data.shift} onChange={s("shift")} placeholder="I feel..." accent={accent} rows={2} />
+      </Card>
+      <Card>
+        <StepLabel number="6" label="5-Breath Reset" accent={accent} />
+        <p style={{ fontSize: 14, color: "#444", margin: "0 0 4px", lineHeight: 1.5 }}>4 counts in · hold 2 · 6 counts out. Lowers cortisol and opens perception.</p>
+        <BreathTimer />
+      </Card>
+      <GuideNudge onGoToGuide={onGuide} />
+    </div>
+  );
+}
+
+function EveningPage({ data, setData, onGuide, mode }) {
+  const s = k => v => setData(d => ({ ...d, [k]: v }));
+  const accent = "#E65100";
+  const isFull = mode === "full";
+  const n = (full, quick) => isFull ? full : quick;
+  return (
+    <div>
+      <SectionHeader emoji="🌙" title="Evening Session" subtitle={isFull ? "10 min · Consolidate & rewire" : "15 min · Consolidate & rewire"} color={accent} />
+      <ScienceNote accent={accent} bg="#FFF8F4" text={
+        isFull
+          ? "Sleep consolidates memories. What you review before bed gets reinforced most strongly — making this the most powerful session for long-term rewiring."
+          : "Sleep consolidates memories — what you review before bed gets reinforced most strongly. Visualization is also more potent close to sleep, when the boundary between imagination and memory is blurrier."
+      } />
+
+      {!isFull && (
+        <Card>
+          <StepLabel number="7" label="Abundance Visualization" accent={accent} />
+          <p style={{ fontSize: 14, color: "#444", margin: "0 0 12px", lineHeight: 1.5 }}>Close your eyes and vividly imagine one goal as already achieved. Engage all 5 senses, then describe it:</p>
+          <Field value={data.viz} onChange={s("viz")} placeholder="I can see... I can feel... I can hear..." accent={accent} rows={4} />
+        </Card>
+      )}
+
+      <Card>
+        <StepLabel number={n("7","8")} label="Evidence Log" accent={accent} />
+        <p style={{ fontSize: 14, color: "#444", margin: "0 0 12px", lineHeight: 1.5 }}>Small proof counts. Find 2–3 signs that abundance is already present in your life today:</p>
+        {[1,2,3].map(i => <Field key={i} label={`Evidence ${i}`} value={data[`ev${i}`]} onChange={s(`ev${i}`)} placeholder="Today I noticed..." accent={accent} />)}
+      </Card>
+      <Card>
+        <StepLabel number={n("8","9")} label="Identity Statement" accent={accent} />
+        <p style={{ fontSize: 14, color: "#444", margin: "0 0 12px", lineHeight: 1.5 }}>Identity framing rewires your self-concept at a deeper level than goal-setting alone:</p>
+        <div style={{ background: "#FFF5F0", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${accent}33` }}>
+          <div style={{ background: accent, padding: "9px 13px", fontSize: 14, fontWeight: 700, color: "#fff" }}>I am someone who...</div>
+          <textarea value={data.identity || ""} onChange={e => s("identity")(e.target.value)} placeholder="describes you at your best" rows={2}
+            style={{ width: "100%", background: "transparent", border: "none", padding: "11px 13px", color: "#111", fontSize: 16, fontFamily: "'DM Sans', sans-serif", resize: "none", outline: "none", lineHeight: 1.7, boxSizing: "border-box" }} />
+        </div>
+      </Card>
+      <Card>
+        <StepLabel number={n("9","10")} label="Release" accent={accent} />
+        <p style={{ fontSize: 14, color: "#444", margin: "0 0 12px", lineHeight: 1.5 }}>Write a worry, then consciously set it aside so your brain doesn't ruminate overnight:</p>
+        <Field label="The worry" value={data.worry} onChange={s("worry")} placeholder="I've been stressed about..." accent={accent} rows={2} />
+        <Field label="I release it because..." value={data.release} onChange={s("release")} placeholder="I don't need to solve this tonight because..." accent={accent} rows={2} />
+      </Card>
+      <Card>
+        <StepLabel number={n("10","11")} label="Evening Mood" accent={accent} />
+        <MoodPicker value={data.mood} onChange={s("mood")} />
+        <div style={{ marginTop: 14 }}>
+          <Field label="Key insight today" value={data.insight} onChange={s("insight")} placeholder="Something I realized..." accent={accent} rows={2} />
+          <Field label="Tomorrow I will" value={data.tomorrow} onChange={s("tomorrow")} placeholder="One thing to carry forward..." accent={accent} rows={2} />
+        </div>
+      </Card>
+      <GuideNudge onGoToGuide={onGuide} />
+    </div>
+  );
+}
+
+function WeeklyPage({ data, setData, onGuide }) {
+  const s = k => v => setData(d => ({ ...d, [k]: v }));
+  const accent = "#1565C0";
+  return (
+    <div>
+      <SectionHeader emoji="📊" title="Weekly Review" subtitle="20–30 min · Sunday reset" color={accent} />
+      <ScienceNote accent={accent} bg="#F0F7FF" text="Tracking weekly patterns shows your brain the evidence it needs to cement new beliefs. Reviewing progress activates the reward system and reinforces consistency." />
+      <Card>
+        <StepLabel label="Weekly Wins" accent={accent} />
+        <p style={{ fontSize: 14, color: "#444", margin: "0 0 12px", lineHeight: 1.5 }}>Focus on effort and growth — not just outcomes:</p>
+        {[1,2,3,4,5].map(i => <Field key={i} label={`Win ${i}`} value={data[`win${i}`]} onChange={s(`win${i}`)} placeholder="Something I'm proud of..." accent={accent} />)}
+      </Card>
+      <Card>
+        <StepLabel label="Novelty Log" accent={accent} />
+        <p style={{ fontSize: 14, color: "#444", margin: "0 0 12px", lineHeight: 1.5 }}>Novelty triggers dopamine and builds neural flexibility:</p>
+        <Field label="New thing I tried" value={data.novelty} onChange={s("novelty")} placeholder="Something I did for the first time..." accent={accent} rows={2} />
+        <Field label="What I noticed or felt" value={data.noveltyFelt} onChange={s("noveltyFelt")} placeholder="It made me feel..." accent={accent} rows={2} />
+      </Card>
+      <Card>
+        <StepLabel label="Social Mirror" accent={accent} />
+        <p style={{ fontSize: 14, color: "#444", margin: "0 0 12px", lineHeight: 1.5 }}>You absorb the patterns of the people around you:</p>
+        <Field label="Who uplifted me" value={data.uplift} onChange={s("uplift")} placeholder="Name + why..." accent={accent} rows={2} />
+        <Field label="Who drained my energy" value={data.drain} onChange={s("drain")} placeholder="Name + why..." accent={accent} rows={2} />
+        <Field label="Who I should spend more time with" value={data.more} onChange={s("more")} placeholder="..." accent={accent} rows={2} />
+      </Card>
+      <Card>
+        <StepLabel label="Pattern Review" accent={accent} />
+        <Field label="What pattern do I see in my evidence logs?" value={data.pattern} onChange={s("pattern")} placeholder="Looking back this week, I notice..." accent={accent} rows={3} />
+        <Field label="Next week's mindset focus" value={data.next} onChange={s("next")} placeholder="One shift I'll practice..." accent={accent} rows={2} />
+      </Card>
+      <GuideNudge onGoToGuide={onGuide} />
+    </div>
+  );
+}
+
+function ReferencePage() {
+  const [open, setOpen] = useState(null);
+  const [openGloss, setOpenGloss] = useState(null);
+  const accent = "#7B4BBF";
+  return (
+    <div>
+      <SectionHeader emoji="📖" title="Reference Guide" subtitle="Definitions & intention examples" color={accent} />
+
+      <h3 style={{ fontSize: 15, fontWeight: 800, letterSpacing: 2, color: "#666", textTransform: "uppercase", margin: "0 0 10px" }}>Key Concepts Glossary</h3>
+      {GLOSSARY.map((item, i) => (
+        <Card key={i} style={{ marginBottom: 8, padding: 0 }}>
+          <button onClick={() => setOpenGloss(openGloss === i ? null : i)} style={{
+            width: "100%", background: "none", border: "none", padding: "14px 16px",
+            cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", textAlign: "left",
+          }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: accent }}>
+              {item.term}{item.full ? <span style={{ fontSize: 15, color: "#666", fontWeight: 400 }}> · {item.full}</span> : ""}
+            </span>
+            <span style={{ color: "#666", fontSize: 18, flexShrink: 0, marginLeft: 8 }}>{openGloss === i ? "−" : "+"}</span>
+          </button>
+          {openGloss === i && <div style={{ padding: "0 16px 14px", fontSize: 15, color: "#444", lineHeight: 1.7 }}>{item.def}</div>}
+        </Card>
+      ))}
+
+      <h3 style={{ fontSize: 15, fontWeight: 800, letterSpacing: 2, color: "#666", textTransform: "uppercase", margin: "20px 0 6px" }}>"Today I will notice opportunities to..."</h3>
+      <p style={{ fontSize: 15, color: "#444", lineHeight: 1.7, marginBottom: 12 }}>Tap a category for example intentions. The more specific and personally meaningful, the more powerfully it programs your RAS.</p>
+
+      {Object.entries(INTENTION_EXAMPLES).map(([cat, { color, light, examples }]) => (
+        <Card key={cat} style={{ marginBottom: 8, padding: 0 }}>
+          <button onClick={() => setOpen(open === cat ? null : cat)} style={{
+            width: "100%", background: open === cat ? light : "none", border: "none",
+            padding: "14px 16px", cursor: "pointer", display: "flex",
+            justifyContent: "space-between", alignItems: "center", borderRadius: 16, transition: "background 0.2s",
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color }}>{cat}</span>
+            <span style={{ color, fontSize: 20, fontWeight: 300 }}>{open === cat ? "−" : "+"}</span>
+          </button>
+          {open === cat && (
+            <div style={{ padding: "0 16px 14px" }}>
+              {examples.map((ex, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, padding: "8px 0", borderTop: "1px solid #F5F5F5" }}>
+                  <span style={{ color, flexShrink: 0, fontWeight: 700 }}>→</span>
+                  <span style={{ fontSize: 15, color: "#444", lineHeight: 1.6, fontStyle: "italic" }}>{ex}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      ))}
+
+      <Card style={{ background: "#FFFBF0", border: "1px solid #FFE082", boxShadow: "none", marginTop: 8 }}>
+        <h4 style={{ fontSize: 14, fontWeight: 800, color: "#F57C00", margin: "0 0 10px", letterSpacing: 1, textTransform: "uppercase" }}>💡 Writing powerful intentions</h4>
+        {[
+          ["Be specific", "'notice chances to collaborate' beats 'be positive'"],
+          ["Use active verbs", "notice · create · express · receive · offer · deepen"],
+          ["Make it resonant", "if it doesn't excite you slightly, rewrite it"],
+          ["Rotate categories", "career, relationships, growth, and joy all matter"],
+          ["Stay present-tense", "'today I will notice' beats 'someday I want to'"],
+        ].map(([t, d], i) => (
+          <div key={i} style={{ display: "flex", gap: 8, marginBottom: 7, fontSize: 15, lineHeight: 1.6 }}>
+            <span style={{ color: "#F57C00", flexShrink: 0 }}>•</span>
+            <span style={{ color: "#444" }}><strong style={{ color: "#333" }}>{t}</strong> — {d}</span>
+          </div>
+        ))}
+      </Card>
+
+      <div style={{ textAlign: "center", padding: "24px 0 8px" }}>
+        <p style={{ fontSize: 14, color: "#666", lineHeight: 1.8 }}>
+          The brain changes through<br />
+          <strong style={{ color: "#555" }}>repetition · emotion · specificity</strong><br />
+          Allow 30–90 days for new patterns to feel automatic.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+
+function ArchivePage({ onGoToDay }) {
+  const [entries, setEntries] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [dayData, setDayData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const keys = await window.storage.list("morning:");
+        if (keys && keys.keys) {
+          const dates = keys.keys
+            .map(k => k.replace("morning:", ""))
+            .filter(d => d !== todayKey())
+            .sort((a, b) => b.localeCompare(a));
+          setEntries(dates);
+        }
+      } catch {}
+      setLoading(false);
+    })();
+  }, []);
+
+  const loadDay = async (date) => {
+    setSelected(date);
+    setDayData(null);
+    try {
+      const [m, md, e] = await Promise.all([
+        window.storage.get(`morning:${date}`),
+        window.storage.get(`midday:${date}`),
+        window.storage.get(`evening:${date}`),
+      ]);
+      setDayData({
+        morning: m ? JSON.parse(m.value) : {},
+        midday: md ? JSON.parse(md.value) : {},
+        evening: e ? JSON.parse(e.value) : {},
+      });
+    } catch {}
+  };
+
+  const formatDate = (dateStr) => {
+    const d = new Date(dateStr + "T12:00:00");
+    return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  };
+
+  const moodForDate = (data) => {
+    if (!data) return null;
+    const m = MOOD_LEVELS.find(ml => ml.label === data.morning?.mood);
+    return m || null;
+  };
+
+  const hasContent = (data) => {
+    if (!data) return false;
+    const all = { ...data.morning, ...data.midday, ...data.evening };
+    return Object.values(all).some(v => v && v.trim && v.trim().length > 0);
+  };
+
+  if (loading) return (
+    <div style={{ padding: "40px 0", textAlign: "center" }}>
+      <p style={{ color: "#666", fontSize: 15 }}>Loading your archive...</p>
+    </div>
+  );
+
+  if (selected && dayData) {
+    const mood = moodForDate(dayData);
+    return (
+      <div>
+        <button onClick={() => { setSelected(null); setDayData(null); }} style={{
+          display: "flex", alignItems: "center", gap: 6, background: "none", border: "none",
+          cursor: "pointer", color: "#7B4BBF", fontSize: 15, fontWeight: 700, marginBottom: 20, padding: 0,
+        }}>
+          ← Back to Archive
+        </button>
+
+        <div style={{ background: "#fff", borderRadius: 16, padding: "18px 16px", marginBottom: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+          <p style={{ fontSize: 13, color: "#888", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700 }}>Entry for</p>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: "#1A1A2E", fontFamily: "'DM Serif Display', serif", margin: "0 0 8px" }}>{formatDate(selected)}</h2>
+          {mood && (
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: mood.light, border: `1px solid ${mood.color}33`, borderRadius: 20, padding: "4px 12px" }}>
+              <span style={{ fontSize: 16 }}>{mood.emoji}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: mood.color }}>Morning mood: {mood.label}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Morning */}
+        {(dayData.morning.g1 || dayData.morning.g2 || dayData.morning.g3 || dayData.morning.viz || dayData.morning.intention) && (
+          <div style={{ background: "#fff", borderRadius: 16, padding: "18px 16px", marginBottom: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", borderLeft: "4px solid #7B4BBF" }}>
+            <p style={{ fontSize: 13, fontWeight: 800, color: "#7B4BBF", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 14px" }}>🌅 Morning</p>
+            {[dayData.morning.g1, dayData.morning.g2, dayData.morning.g3].filter(Boolean).map((g, i) => (
+              <div key={i} style={{ marginBottom: 10 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#7B4BBF", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: 0.8 }}>Gratitude {i+1}</p>
+                <p style={{ fontSize: 15, color: "#222", lineHeight: 1.6, margin: 0 }}>{g}</p>
+              </div>
+            ))}
+            {dayData.morning.intention && (
+              <div style={{ marginTop: 10, background: "#F5F0FF", borderRadius: 10, padding: "10px 12px" }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#7B4BBF", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: 0.8 }}>Intention</p>
+                <p style={{ fontSize: 15, color: "#222", lineHeight: 1.6, margin: 0 }}>Today I will notice opportunities to {dayData.morning.intention}</p>
+              </div>
+            )}
+            {dayData.morning.viz && (
+              <div style={{ marginTop: 10 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#7B4BBF", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: 0.8 }}>Visualization</p>
+                <p style={{ fontSize: 15, color: "#222", lineHeight: 1.6, margin: 0 }}>{dayData.morning.viz}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Midday */}
+        {(dayData.midday.well || dayData.midday.shift) && (
+          <div style={{ background: "#fff", borderRadius: 16, padding: "18px 16px", marginBottom: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", borderLeft: "4px solid #00897B" }}>
+            <p style={{ fontSize: 13, fontWeight: 800, color: "#00897B", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 14px" }}>☀️ Midday</p>
+            {dayData.midday.well && (
+              <div style={{ marginBottom: 10 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#00897B", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: 0.8 }}>Went well</p>
+                <p style={{ fontSize: 15, color: "#222", lineHeight: 1.6, margin: 0 }}>{dayData.midday.well}</p>
+              </div>
+            )}
+            {dayData.midday.shift && (
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#00897B", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: 0.8 }}>Energy shift</p>
+                <p style={{ fontSize: 15, color: "#222", lineHeight: 1.6, margin: 0 }}>{dayData.midday.shift}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Evening */}
+        {(dayData.evening.ev1 || dayData.evening.ev2 || dayData.evening.ev3 || dayData.evening.identity || dayData.evening.insight) && (
+          <div style={{ background: "#fff", borderRadius: 16, padding: "18px 16px", marginBottom: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", borderLeft: "4px solid #E65100" }}>
+            <p style={{ fontSize: 13, fontWeight: 800, color: "#E65100", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 14px" }}>🌙 Evening</p>
+            {[dayData.evening.ev1, dayData.evening.ev2, dayData.evening.ev3].filter(Boolean).map((ev, i) => (
+              <div key={i} style={{ marginBottom: 10 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#E65100", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: 0.8 }}>Evidence {i+1}</p>
+                <p style={{ fontSize: 15, color: "#222", lineHeight: 1.6, margin: 0 }}>{ev}</p>
+              </div>
+            ))}
+            {dayData.evening.identity && (
+              <div style={{ marginTop: 10, background: "#FFF5F0", borderRadius: 10, padding: "10px 12px" }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#E65100", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: 0.8 }}>Identity Statement</p>
+                <p style={{ fontSize: 15, color: "#222", lineHeight: 1.6, margin: 0 }}>I am someone who {dayData.evening.identity}</p>
+              </div>
+            )}
+            {dayData.evening.insight && (
+              <div style={{ marginTop: 10 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#E65100", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: 0.8 }}>Key Insight</p>
+                <p style={{ fontSize: 15, color: "#222", lineHeight: 1.6, margin: 0 }}>{dayData.evening.insight}</p>
+              </div>
+            )}
+            {dayData.evening.mood && (() => {
+              const em = MOOD_LEVELS.find(ml => ml.label === dayData.evening.mood);
+              return em ? (
+                <div style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 6, background: em.light, border: `1px solid ${em.color}33`, borderRadius: 20, padding: "4px 12px" }}>
+                  <span>{em.emoji}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: em.color }}>Evening mood: {em.label}</span>
+                </div>
+              ) : null;
+            })()}
+          </div>
+        )}
+
+        {!hasContent(dayData) && (
+          <div style={{ background: "#fff", borderRadius: 16, padding: "32px 16px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <p style={{ fontSize: 40, margin: "0 0 12px" }}>📭</p>
+            <p style={{ fontSize: 15, color: "#666" }}>No entries were saved for this day.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: "#1A1A2E", fontFamily: "'DM Serif Display', serif", margin: "0 0 6px" }}>📅 Your Archive</h2>
+        <div style={{ height: 3, background: "#7B4BBF", borderRadius: 2 }} />
+      </div>
+
+      {entries.length === 0 ? (
+        <div style={{ background: "#fff", borderRadius: 16, padding: "40px 24px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+          <p style={{ fontSize: 40, margin: "0 0 16px" }}>🌱</p>
+          <p style={{ fontSize: 17, fontWeight: 700, color: "#1A1A2E", margin: "0 0 8px" }}>No past entries yet</p>
+          <p style={{ fontSize: 15, color: "#555", lineHeight: 1.6 }}>Complete your first day and it will appear here tomorrow. Keep going — every entry is a step toward a rewired brain.</p>
+        </div>
+      ) : (
+        <>
+          <div style={{ background: "#F5F0FF", borderRadius: 14, padding: "12px 16px", marginBottom: 16, border: "1px solid #D1C4E9" }}>
+            <p style={{ fontSize: 14, color: "#5E35B1", lineHeight: 1.6, margin: 0 }}>
+              <strong>{entries.length} day{entries.length !== 1 ? "s" : ""} logged.</strong> Tap any entry to read your full notes for that day.
+            </p>
+          </div>
+          {entries.map(date => {
+            const d = new Date(date + "T12:00:00");
+            const weekday = d.toLocaleDateString("en-US", { weekday: "short" });
+            const dayNum = d.getDate();
+            const monthYear = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+            return (
+              <button key={date} onClick={() => loadDay(date)} style={{
+                width: "100%", background: "#fff", border: "none", borderRadius: 14,
+                padding: "14px 16px", marginBottom: 8, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 14,
+                boxShadow: "0 1px 4px rgba(0,0,0,0.06)", textAlign: "left",
+                transition: "box-shadow 0.15s",
+              }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: "#EDE7F6", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "#7B4BBF", textTransform: "uppercase", letterSpacing: 0.5 }}>{weekday}</span>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: "#5E35B1", lineHeight: 1 }}>{dayNum}</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: "#1A1A2E", margin: "0 0 2px" }}>{monthYear}</p>
+                  <p style={{ fontSize: 13, color: "#666", margin: 0 }}>Tap to view full entry</p>
+                </div>
+                <span style={{ color: "#BDBDBD", fontSize: 20 }}>›</span>
+              </button>
+            );
+          })}
+        </>
+      )}
+    </div>
+  );
+}
+
+function App() {
+  const key = todayKey();
+  const [morning, setMorning, ml] = useStorage(`morning:${key}`, {});
+  const [midday, setMidday, mdl] = useStorage(`midday:${key}`, {});
+  const [evening, setEvening, el] = useStorage(`evening:${key}`, {});
+  const [weekly, setWeekly, wl] = useStorage(`week:${key.slice(0,7)}`, {});
+  const [mode, setMode, modeLoaded] = useStorage("user:mode", null);
+  const [tab, setTab] = useState("onboarding");
+
+  // Once mode loads, decide starting tab
+  useEffect(() => {
+    if (modeLoaded && mode !== null) setTab("intro");
+  }, [modeLoaded, mode]);
+
+  const handleChooseMode = async (chosen) => {
+    await setMode(chosen);
+    setTab("morning");
+  };
+
+  const handleChangeMode = (chosen) => {
+    setMode(chosen);
+  };
+
+  const tabs = [
+    { id: "intro",     emoji: "🏠", label: "Home",    color: "#7B4BBF" },
+    { id: "morning",   emoji: "🌅", label: "Morning", color: "#7B4BBF" },
+    { id: "midday",    emoji: "☀️",  label: "Midday",  color: "#00897B" },
+    { id: "evening",   emoji: "🌙", label: "Evening", color: "#E65100" },
+    { id: "weekly",    emoji: "📊", label: "Weekly",  color: "#1565C0" },
+    { id: "archive",   emoji: "📅", label: "Archive", color: "#7B4BBF" },
+    { id: "reference", emoji: "📖", label: "Guide",   color: "#5E35B1" },
+  ];
+
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+
+  if (!ml || !mdl || !el || !wl || !modeLoaded) return (
+    <div style={{ minHeight: "100vh", background: "#F2F4F8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <p style={{ color: "#666", letterSpacing: 2, fontSize: 13 }}>Loading...</p>
+    </div>
+  );
+
+  // Show onboarding on very first launch (mode not yet set)
+  if (tab === "onboarding" || mode === null) return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Serif+Display&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #F2F4F8; font-family: 'DM Sans', sans-serif; color: #1A1A2E; -webkit-font-smoothing: antialiased; }
+        button { font-family: 'DM Sans', sans-serif; }
+      `}</style>
+      <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", padding: "32px 20px 60px" }}>
+        <OnboardingPage onChoose={handleChooseMode} />
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Serif+Display&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #F2F4F8; font-family: 'DM Sans', sans-serif; color: #1A1A2E; -webkit-font-smoothing: antialiased; }
+        textarea { font-family: 'DM Sans', sans-serif; }
+        textarea::placeholder { color: #AAAAAA; font-size: 15px; }
+        button { font-family: 'DM Sans', sans-serif; }
+      `}</style>
+
+      <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+
+        {/* Header */}
+        <div style={{ background: "#fff", padding: "16px 20px 0", boxShadow: "0 1px 0 #EEEEEE", position: "sticky", top: 0, zIndex: 100 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div>
+              <h1 style={{ fontSize: 19, fontWeight: 800, color: "#1A1A2E", fontFamily: "'DM Serif Display', serif", margin: 0, letterSpacing: -0.3 }}>Abundance Mindset</h1>
+              <p style={{ fontSize: 14, color: "#555", margin: "2px 0 0" }}>{today}</p>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ fontSize: 13, color: mode === "full" ? "#7B4BBF" : "#00897B", fontWeight: 700, background: mode === "full" ? "#EDE7F6" : "#E0F2F1", padding: "3px 10px", borderRadius: 20 }}>
+                {mode === "full" ? "🌿 Full" : "⚡ Quick"}
+              </span>
+              <div style={{ fontSize: 13, color: "#2E7D32", fontWeight: 700, background: "#E8F5E9", padding: "3px 10px", borderRadius: 20 }}>✓ saved</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", marginLeft: -20, marginRight: -20, paddingLeft: 8, paddingRight: 8, overflowX: "auto" }}>
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{
+                flex: "0 0 auto", padding: "10px 12px", background: "none", border: "none",
+                cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                borderBottom: `3px solid ${tab === t.id ? t.color : "transparent"}`,
+                transition: "border-color 0.2s", minWidth: 64,
+              }}>
+                <span style={{ fontSize: 18 }}>{t.emoji}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: tab === t.id ? t.color : "#BDBDBD" }}>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Page content */}
+        <div style={{ flex: 1, padding: "20px 16px 80px" }}>
+          {tab === "intro"     && <IntroPage onStart={() => setTab("morning")} mode={mode} onChangeMode={handleChangeMode} />}
+          {tab === "morning"   && <MorningPage   data={morning} setData={setMorning} onGuide={() => setTab("reference")} mode={mode} />}
+          {tab === "midday"    && <MiddayPage    data={midday}  setData={setMidday}  onGuide={() => setTab("reference")} />}
+          {tab === "evening"   && <EveningPage   data={evening} setData={setEvening} onGuide={() => setTab("reference")} mode={mode} />}
+          {tab === "weekly"    && <WeeklyPage    data={weekly}  setData={setWeekly}  onGuide={() => setTab("reference")} />}
+          {tab === "archive"   && <ArchivePage />}
+          {tab === "reference" && <ReferencePage />}
+        </div>
+
+        <div style={{ background: "#fff", borderTop: "1px solid #F0F0F0", padding: "10px 20px", textAlign: "center" }}>
+          <p style={{ fontSize: 13, color: "#555" }}>Entries save automatically · Past days viewable in Archive</p>
+        </div>
+      </div>
+    </>
+  );
+}
+
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(React.createElement(App));
+
+  </script>
+</body>
+</html>
