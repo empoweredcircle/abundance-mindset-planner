@@ -23,28 +23,6 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script>
-    window.storage = {
-      get: async function(key) {
-        var value = localStorage.getItem(key);
-        if (value === null) throw new Error("Not found");
-        return { key: key, value: value };
-      },
-      set: async function(key, value) {
-        localStorage.setItem(key, value);
-        return { key: key, value: value };
-      },
-      delete: async function(key) {
-        localStorage.removeItem(key);
-        return { key: key, deleted: true };
-      },
-      list: async function(prefix) {
-        prefix = prefix || "";
-        var keys = Object.keys(localStorage).filter(function(k) { return k.startsWith(prefix); });
-        return { keys: keys };
-      }
-    };
-  </script>
-  <script>
 const { useState, useEffect, useRef } = React;
 const MOOD_LEVELS = [
     { label: "Drained", emoji: "🪫", color: "#78909C", light: "#ECEFF1" },
@@ -286,38 +264,86 @@ function useStreak() {
     };
     return { stats, loaded, refresh, addFreeze };
 }
+const BREATH_MODES = {
+    gentle: {
+        label: "Gentle",
+        pattern: "4 · 4 · 6",
+        breaths: 5,
+        box: false,
+        phases: [
+            { name: "Inhale", duration: 4, color: "#00897B", hint: "Breathe in slowly through your nose" },
+            { name: "Hold", duration: 4, color: "#7B4BBF", hint: "Hold gently — relax your shoulders" },
+            { name: "Exhale", duration: 6, color: "#1E88E5", hint: "Breathe out slowly through your mouth" },
+        ]
+    },
+    box: {
+        label: "Box",
+        pattern: "4 · 4 · 4 · 4",
+        breaths: 5,
+        box: true,
+        phases: [
+            { name: "Inhale", duration: 4, color: "#00897B", dimColor: "#B2DFDB", hint: "Breathe in slowly through your nose" },
+            { name: "Hold", duration: 4, color: "#7B4BBF", dimColor: "#D1C4E9", hint: "Hold gently — relax your shoulders" },
+            { name: "Exhale", duration: 4, color: "#1E88E5", dimColor: "#BBDEFB", hint: "Breathe out slowly through your mouth" },
+            { name: "Hold Empty", duration: 4, color: "#F57C00", dimColor: "#FFE0B2", hint: "Pause gently before the next breath" },
+        ]
+    },
+    deep: {
+        label: "Deep",
+        pattern: "4 · 7 · 8",
+        breaths: 4,
+        box: false,
+        phases: [
+            { name: "Inhale", duration: 4, color: "#00897B", hint: "Breathe in slowly through your nose" },
+            { name: "Hold", duration: 7, color: "#7B4BBF", hint: "Hold gently — relax your shoulders" },
+            { name: "Exhale", duration: 8, color: "#1E88E5", hint: "Breathe out slowly through your mouth" },
+        ]
+    },
+};
 function BreathTimer() {
     const [phase, setPhase] = useState("idle");
     const [count, setCount] = useState(0);
     const [breathsDone, setBreathsDone] = useState(0);
     const [phaseIdx, setPhaseIdx] = useState(0);
+    const [breathMode, setBreathMode] = useState(() => {
+        try {
+            return localStorage.getItem("breathMode") || "gentle";
+        }
+        catch (_a) {
+            return "gentle";
+        }
+    });
     const intervalRef = useRef(null);
-    const phases = [
-        { name: "Inhale", duration: 4, color: "#00897B" },
-        { name: "Hold", duration: 2, color: "#7B4BBF" },
-        { name: "Exhale", duration: 6, color: "#1E88E5" },
-    ];
+    const mode = BREATH_MODES[breathMode];
+    const phases = mode.phases;
     const stop = () => { clearInterval(intervalRef.current); setPhase("idle"); setCount(0); setPhaseIdx(0); };
-    const start = () => {
+    const start = (selectedMode) => {
+        const m = BREATH_MODES[selectedMode];
+        const numPhases = m.phases.length;
+        try {
+            localStorage.setItem("breathMode", selectedMode);
+        }
+        catch (_a) { }
+        setBreathMode(selectedMode);
         setPhase("running");
         setPhaseIdx(0);
-        setCount(phases[0].duration);
+        setCount(m.phases[0].duration);
         setBreathsDone(0);
-        let cp = 0, cc = phases[0].duration, b = 0;
+        let cp = 0, cc = m.phases[0].duration, b = 0;
         intervalRef.current = setInterval(() => {
             cc--;
             if (cc <= 0) {
-                cp = (cp + 1) % 3;
+                cp = (cp + 1) % numPhases;
                 if (cp === 0) {
                     b++;
                     setBreathsDone(b);
-                    if (b >= 5) {
+                    if (b >= m.breaths) {
                         clearInterval(intervalRef.current);
                         setPhase("done");
                         return;
                     }
                 }
-                cc = phases[cp].duration;
+                cc = m.phases[cp].duration;
                 setPhaseIdx(cp);
             }
             setCount(cc);
@@ -325,22 +351,63 @@ function BreathTimer() {
     };
     useEffect(() => () => clearInterval(intervalRef.current), []);
     const cur = phases[phaseIdx];
-    const prog = phase === "running" ? ((phases[phaseIdx].duration - count) / phases[phaseIdx].duration) * 100 : 0;
+    const phaseDuration = phases[phaseIdx].duration;
+    const prog = phase === "running" ? ((phaseDuration - count) / phaseDuration) * 100 : 0;
+    const nearEnd = phase === "running" && count <= 2;
+    const ringColor = nearEnd ? "#F57C00" : cur.color;
     const r = 54, circ = 2 * Math.PI * r;
     return (React.createElement("div", { style: { textAlign: "center", padding: "16px 0 8px" } },
-        React.createElement("svg", { width: 120, height: 120, style: { display: "block", margin: "0 auto 16px" } },
-            React.createElement("circle", { cx: 60, cy: 60, r: r, fill: "none", stroke: "#F0F0F0", strokeWidth: 6 }),
-            phase === "running" && (React.createElement("circle", { cx: 60, cy: 60, r: r, fill: "none", stroke: cur.color, strokeWidth: 6, strokeDasharray: circ, strokeDashoffset: circ * (1 - prog / 100), strokeLinecap: "round", transform: "rotate(-90 60 60)", style: { transition: "stroke-dashoffset 0.9s linear" } })),
-            React.createElement("text", { x: 60, y: phase === "running" ? 55 : 65, textAnchor: "middle", style: { fontSize: phase === "running" ? 26 : 34, fontWeight: 700, fill: phase === "running" ? cur.color : "#CCCCCC", fontFamily: "sans-serif" } }, phase === "idle" ? "🫁" : phase === "done" ? "✅" : count),
-            phase === "running" && (React.createElement("text", { x: 60, y: 74, textAnchor: "middle", style: { fontSize: 15, fill: cur.color, fontFamily: "sans-serif", letterSpacing: 1 } }, cur.name.toUpperCase()))),
-        phase === "running" && (React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 8, marginBottom: 14 } }, [...Array(5)].map((_, i) => (React.createElement("div", { key: i, style: { width: 10, height: 10, borderRadius: "50%", background: i < breathsDone ? "#00897B" : "#E0E0E0", transition: "background 0.3s" } }))))),
-        phase === "done" && React.createElement("p", { style: { color: "#00897B", marginBottom: 14, fontSize: 15, fontWeight: 600 } }, "5 breaths complete \u2713"),
-        React.createElement("button", { onClick: phase === "idle" || phase === "done" ? start : stop, style: {
+        (phase === "idle" || phase === "done") && (React.createElement("div", { style: { marginBottom: 16 } },
+            phase === "done" && React.createElement("p", { style: { color: "#00897B", marginBottom: 12, fontSize: 15, fontWeight: 700 } },
+                mode.breaths,
+                " breaths complete \u2713"),
+            React.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } }, Object.entries(BREATH_MODES).map(([key, m]) => (React.createElement("button", { key: key, onClick: () => start(key), style: {
+                    flex: 1, maxWidth: 160, padding: "12px 10px", borderRadius: 12, border: "none",
+                    cursor: "pointer", transition: "all 0.15s",
+                    background: breathMode === key ? (key === "gentle" ? "#E0F2F1" : key === "box" ? "#FFF3E0" : "#EDE7F6") : "#F5F5F5",
+                    boxShadow: breathMode === key ? `0 0 0 2px ${key === "gentle" ? "#00897B" : key === "box" ? "#F57C00" : "#7B4BBF"}` : "none",
+                } },
+                React.createElement("p", { style: { fontSize: 14, fontWeight: 800, color: key === "gentle" ? "#00897B" : key === "box" ? "#F57C00" : "#7B4BBF", margin: "0 0 2px" } },
+                    phase === "done" ? "▶ " : "",
+                    m.label),
+                React.createElement("p", { style: { fontSize: 12, color: "#666", margin: 0 } }, m.pattern))))))),
+        phase === "running" && (React.createElement("p", { style: { fontSize: 13, color: nearEnd ? "#F57C00" : "#666", marginBottom: 10, lineHeight: 1.5, fontWeight: nearEnd ? 700 : 400, transition: "color 0.3s" } }, nearEnd ? "Get ready to transition..." : cur.hint)),
+        React.createElement("svg", { width: 140, height: 140, style: { display: "block", margin: "0 auto 14px" } },
+            mode.box && phase === "running" ? (React.createElement(React.Fragment, null, phases.map((p, i) => {
+                const segAngle = 360 / 4;
+                const gapDeg = 6;
+                const startDeg = i * segAngle - 90 + gapDeg / 2;
+                const endDeg = startDeg + segAngle - gapDeg;
+                const startRad = startDeg * Math.PI / 180;
+                const endRad = endDeg * Math.PI / 180;
+                const x1 = 70 + r * Math.cos(startRad);
+                const y1 = 70 + r * Math.sin(startRad);
+                const x2 = 70 + r * Math.cos(endRad);
+                const y2 = 70 + r * Math.sin(endRad);
+                const isActive = i === phaseIdx;
+                const isPast = i < phaseIdx;
+                // For active segment, clip based on progress
+                const activeProgress = isActive ? prog / 100 : (isPast ? 1 : 0);
+                const activeEndRad = startRad + (endRad - startRad) * activeProgress;
+                const ax2 = 70 + r * Math.cos(activeEndRad);
+                const ay2 = 70 + r * Math.sin(activeEndRad);
+                return (React.createElement("g", { key: i },
+                    React.createElement("path", { d: `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`, fill: "none", stroke: p.dimColor, strokeWidth: 8, strokeLinecap: "round" }),
+                    activeProgress > 0 && (React.createElement("path", { d: `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${isActive ? ax2 : x2} ${isActive ? ay2 : y2}`, fill: "none", stroke: isActive ? (nearEnd ? "#F57C00" : p.color) : p.color, strokeWidth: 8, strokeLinecap: "round", style: { transition: isActive ? "none" : "none" } }))));
+            }))) : (React.createElement(React.Fragment, null,
+                React.createElement("circle", { cx: 70, cy: 70, r: r, fill: "none", stroke: "#F0F0F0", strokeWidth: 8 }),
+                nearEnd && phase === "running" && (React.createElement("circle", { cx: 70, cy: 70, r: r, fill: "none", stroke: "#FFE0B2", strokeWidth: 8 })),
+                phase === "running" && (React.createElement("circle", { cx: 70, cy: 70, r: r, fill: "none", stroke: ringColor, strokeWidth: 8, strokeDasharray: circ, strokeDashoffset: circ * (1 - prog / 100), strokeLinecap: "round", transform: "rotate(-90 70 70)", style: { transition: "stroke-dashoffset 0.9s linear, stroke 0.3s" } })))),
+            React.createElement("text", { x: 70, y: phase === "running" ? 65 : 78, textAnchor: "middle", style: { fontSize: phase === "running" ? 32 : 40, fontWeight: 800, fill: phase === "running" ? ringColor : "#CCCCCC", fontFamily: "sans-serif", transition: "fill 0.3s" } }, phase === "idle" ? "🫁" : phase === "done" ? "✅" : count),
+            phase === "running" && (React.createElement("text", { x: 70, y: 88, textAnchor: "middle", style: { fontSize: 13, fill: ringColor, fontFamily: "sans-serif", letterSpacing: 1.5, fontWeight: 700, transition: "fill 0.3s" } }, cur.name.toUpperCase()))),
+        phase === "running" && (React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 10, marginBottom: 14 } }, [...Array(mode.breaths)].map((_, i) => (React.createElement("div", { key: i, style: { width: 10, height: 10, borderRadius: "50%", background: i < breathsDone ? "#00897B" : "#E0E0E0", transition: "background 0.3s" } }))))),
+        phase === "running" && (React.createElement("button", { onClick: stop, style: {
                 padding: "10px 28px", borderRadius: 24, border: "none", cursor: "pointer",
-                fontSize: 15, fontWeight: 700, letterSpacing: 0.5,
-                background: phase === "running" ? "#FFEBEE" : "#E8F5E9",
-                color: phase === "running" ? "#C62828" : "#2E7D32",
-            } }, phase === "idle" ? "START" : phase === "running" ? "STOP" : "AGAIN")));
+                fontSize: 15, fontWeight: 700, background: "#FFEBEE", color: "#C62828",
+            } }, "STOP"))));
+    div >
+    ;
+    ;
 }
 function Field({ label, value, onChange, placeholder, rows = 2, accent = "#7B4BBF" }) {
     const [focused, setFocused] = useState(false);
@@ -754,7 +821,7 @@ function MiddayPage({ data, setData, onGuide, onComplete }) {
             React.createElement(Field, { label: "How does noticing this shift your energy?", value: data.shift, onChange: s("shift"), placeholder: "I feel...", accent: accent, rows: 2 })),
         React.createElement(Card, null,
             React.createElement(StepLabel, { number: "6", label: "5-Breath Reset", accent: accent }),
-            React.createElement("p", { style: { fontSize: 14, color: "#444", margin: "0 0 4px", lineHeight: 1.5 } }, "4 counts in \u00B7 hold 2 \u00B7 6 counts out. Lowers cortisol and opens perception."),
+            React.createElement("p", { style: { fontSize: 14, color: "#444", margin: "0 0 4px", lineHeight: 1.5 } }, "Choose your breathing style. All three activate your parasympathetic nervous system, lowering cortisol and resetting your focus for the afternoon."),
             React.createElement(BreathTimer, null)),
         React.createElement(GuideNudge, { onGoToGuide: onGuide })));
 }
