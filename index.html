@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#7B4BBF" />
   <meta name="description" content="A daily mindset planner inspired by neuroscience. Train your brain toward abundance, opportunity, and growth — one day at a time." />
-  <meta property="og:title" content="Abundance Mindset Daily Planner" />
+  <meta property="og:title" content="MyAMP — Abundance Mindset Planner" />
   <meta property="og:description" content="A daily mindset planner inspired by neuroscience." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Abundance" />
-  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjQwIiBmaWxsPSIjN0I0QkJGIi8+PHRleHQgeD0iOTYiIHk9IjEzMCIgZm9udC1zaXplPSIxMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuKcqDwvdGV4dD48L3N2Zz4=" />
-  <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjQwIiBmaWxsPSIjN0I0QkJGIi8+PHRleHQgeD0iOTYiIHk9IjEzMCIgZm9udC1zaXplPSIxMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuKcqDwvdGV4dD48L3N2Zz4=" />
-  <title>Abundance Mindset Planner</title>
+  <meta name="apple-mobile-web-app-title" content="MyAMP" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj4KICA8cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjQwIiBmaWxsPSIjQjM5RERCIi8+CiAgPHRleHQgeD0iOTYiIHk9Ijc4IiBmb250LXNpemU9IjQyIiBmb250LXdlaWdodD0iYm9sZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzMxMUI5MiIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIj5NeTwvdGV4dD4KICA8dGV4dCB4PSI5NiIgeT0iMTMwIiBmb250LXNpemU9IjUyIiBmb250LXdlaWdodD0iYm9sZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzMxMUI5MiIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIj5BTVA8L3RleHQ+Cjwvc3ZnPg==" />
+  <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj4KICA8cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjQwIiBmaWxsPSIjQjM5RERCIi8+CiAgPHRleHQgeD0iOTYiIHk9Ijc4IiBmb250LXNpemU9IjQyIiBmb250LXdlaWdodD0iYm9sZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzMxMUI5MiIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIj5NeTwvdGV4dD4KICA8dGV4dCB4PSI5NiIgeT0iMTMwIiBmb250LXNpemU9IjUyIiBmb250LXdlaWdodD0iYm9sZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzMxMUI5MiIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIj5BTVA8L3RleHQ+Cjwvc3ZnPg==" />
+  <title>MyAMP</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #F2F4F8; }
@@ -20,13 +20,9 @@
 </head>
 <body>
   <div id="root"></div>
-
-  <!-- React via CDN — no build step needed -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
   <script>
-    // localStorage shim matching window.storage API
     window.storage = {
       get: async function(key) {
         var value = localStorage.getItem(key);
@@ -48,8 +44,6 @@
       }
     };
   </script>
-
-  <!-- Pre-compiled app — no Babel needed -->
   <script>
 const { useState, useEffect, useRef } = React;
 const MOOD_LEVELS = [
@@ -460,6 +454,79 @@ function StreakCard({ stats, userWhy, onGoToMorning }) {
                 React.createElement("div", { style: { height: 6, width: 80, background: "#F0F0F0", borderRadius: 3, overflow: "hidden" } },
                     React.createElement("div", { style: { height: "100%", width: `${(weeklyDone / 7) * 100}%`, background: weeklyDone >= 5 ? "#2E7D32" : "#7B4BBF", borderRadius: 3, transition: "width 0.3s" } }))))));
 }
+const SESSION_COMPLETE = {
+    morning: {
+        emoji: "🌅",
+        message: "You're primed and ready for the day. Go get it!",
+        next: "midday",
+        nextLabel: "Start Midday Session",
+        color: "#7B4BBF",
+        bg: "linear-gradient(160deg, #EDE7F6 0%, #E3F2FD 100%)",
+    },
+    midday: {
+        emoji: "☀️",
+        message: "You made it halfway through the day. Keep going!",
+        next: "evening",
+        nextLabel: "Start Evening Session",
+        color: "#00897B",
+        bg: "linear-gradient(160deg, #E0F2F1 0%, #E8F5E9 100%)",
+    },
+    evening: {
+        emoji: "🌙",
+        message: "You showed up and you delivered. Now rest — tomorrow needs you at your best.",
+        next: "intro",
+        nextLabel: "View My Progress",
+        color: "#E65100",
+        bg: "linear-gradient(160deg, #FFF3E0 0%, #FFF8F0 100%)",
+    },
+};
+function SessionComplete({ session, stats, onNext, onHome }) {
+    const cfg = SESSION_COMPLETE[session];
+    const { total, last7, weeklyDone } = stats;
+    return (React.createElement("div", { style: { padding: "8px 0" } },
+        React.createElement("div", { style: { background: cfg.bg, borderRadius: 20, padding: "36px 24px 32px", marginBottom: 20, textAlign: "center" } },
+            React.createElement("div", { style: { fontSize: 56, marginBottom: 14 } }, cfg.emoji),
+            React.createElement("h2", { style: { fontSize: 22, fontWeight: 800, color: "#1A1A2E", fontFamily: "'DM Serif Display', serif", margin: "0 0 12px", lineHeight: 1.3 } }, cfg.message)),
+        React.createElement("div", { style: { background: "#fff", borderRadius: 16, padding: "18px 16px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" } },
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 } },
+                React.createElement("div", null,
+                    React.createElement("p", { style: { fontSize: 13, fontWeight: 700, color: "#7B4BBF", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 2px" } }, "Your Journey"),
+                    React.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 6 } },
+                        React.createElement("span", { style: { fontSize: 32, fontWeight: 800, color: "#1A1A2E" } }, total),
+                        React.createElement("span", { style: { fontSize: 14, color: "#666" } }, "days completed"))),
+                React.createElement("div", { style: { textAlign: "right" } },
+                    React.createElement("p", { style: { fontSize: 13, color: "#555", margin: "0 0 4px" } },
+                        weeklyDone,
+                        "/7 this week"),
+                    React.createElement("div", { style: { height: 6, width: 80, background: "#F0F0F0", borderRadius: 3, overflow: "hidden" } },
+                        React.createElement("div", { style: { height: "100%", width: `${(weeklyDone / 7) * 100}%`, background: weeklyDone >= 5 ? "#2E7D32" : "#7B4BBF", borderRadius: 3 } })))),
+            React.createElement("div", { style: { display: "flex", gap: 6 } }, (last7 || []).map((done, i) => {
+                const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                const d = new Date();
+                d.setDate(d.getDate() - (6 - i));
+                const isToday = i === 6;
+                return (React.createElement("div", { key: i, style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 } },
+                    React.createElement("div", { style: {
+                            width: "100%", aspectRatio: "1", borderRadius: 8, maxWidth: 36,
+                            background: done ? "#7B4BBF" : isToday ? "#F5F0FF" : "#F0F0F0",
+                            border: isToday ? "2px solid #7B4BBF" : "2px solid transparent",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                        } }, done && React.createElement("span", { style: { color: "#fff", fontSize: 13 } }, "\u2713")),
+                    React.createElement("span", { style: { fontSize: 10, color: isToday ? "#7B4BBF" : "#AAAAAA", fontWeight: isToday ? 700 : 400 } }, dayNames[d.getDay()])));
+            }))),
+        React.createElement("button", { onClick: onNext, style: {
+                width: "100%", padding: "16px", borderRadius: 14, border: "none", cursor: "pointer",
+                background: `linear-gradient(135deg, ${cfg.color}, #1565C0)`,
+                color: "#fff", fontSize: 16, fontWeight: 800,
+                boxShadow: `0 4px 16px ${cfg.color}44`, marginBottom: 12,
+            } },
+            cfg.nextLabel,
+            " \u2192"),
+        React.createElement("button", { onClick: onHome, style: {
+                width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E8E8E8",
+                cursor: "pointer", background: "#fff", color: "#555", fontSize: 15, fontWeight: 700,
+            } }, "Back to Home")));
+}
 function OnboardingPage({ onChoose }) {
     const [step, setStep] = useState(1);
     const [selected, setSelected] = useState(null);
@@ -639,7 +706,7 @@ function GuideNudge({ onGoToGuide }) {
             " has examples for every life area."),
         React.createElement("button", { onClick: onGoToGuide, style: { flexShrink: 0, padding: "8px 14px", borderRadius: 20, border: "none", cursor: "pointer", background: "#F57C00", color: "#fff", fontSize: 13, fontWeight: 700 } }, "Open Guide")));
 }
-function MorningPage({ data, setData, onGuide, mode }) {
+function MorningPage({ data, setData, onGuide, mode, onComplete }) {
     const s = k => v => setData(d => (Object.assign(Object.assign({}, d), { [k]: v })));
     const accent = "#7B4BBF";
     const isFull = mode === "full";
@@ -667,9 +734,15 @@ function MorningPage({ data, setData, onGuide, mode }) {
         React.createElement(Card, null,
             React.createElement(StepLabel, { number: isFull ? "4" : "3", label: "Morning Mood", accent: accent }),
             React.createElement(MoodPicker, { value: data.mood, onChange: s("mood") })),
-        React.createElement(GuideNudge, { onGoToGuide: onGuide })));
+        React.createElement(GuideNudge, { onGoToGuide: onGuide }),
+        React.createElement("button", { onClick: onComplete, style: {
+                width: "100%", padding: "16px", borderRadius: 14, border: "none", cursor: "pointer",
+                background: "linear-gradient(135deg, #7B4BBF, #1565C0)",
+                color: "#fff", fontSize: 16, fontWeight: 800,
+                boxShadow: "0 4px 16px rgba(123,75,191,0.3)", marginTop: 8,
+            } }, "Complete Morning Session \u2713")));
 }
-function MiddayPage({ data, setData, onGuide }) {
+function MiddayPage({ data, setData, onGuide, onComplete }) {
     const s = k => v => setData(d => (Object.assign(Object.assign({}, d), { [k]: v })));
     const accent = "#00897B";
     return (React.createElement("div", null,
@@ -713,7 +786,7 @@ function IdentityCard({ data, setData, n, accent }) {
                     "I am someone who ",
                     ex)))))))))));
 }
-function EveningPage({ data, setData, onGuide, mode }) {
+function EveningPage({ data, setData, onGuide, mode, onComplete }) {
     const s = k => v => setData(d => (Object.assign(Object.assign({}, d), { [k]: v })));
     const accent = "#E65100";
     const isFull = mode === "full";
@@ -743,7 +816,13 @@ function EveningPage({ data, setData, onGuide, mode }) {
             React.createElement("div", { style: { marginTop: 14 } },
                 React.createElement(Field, { label: "Key insight today", value: data.insight, onChange: s("insight"), placeholder: "Something I realized...", accent: accent, rows: 2 }),
                 React.createElement(Field, { label: "Tomorrow I will", value: data.tomorrow, onChange: s("tomorrow"), placeholder: "One thing to carry forward...", accent: accent, rows: 2 }))),
-        React.createElement(GuideNudge, { onGoToGuide: onGuide })));
+        React.createElement(GuideNudge, { onGoToGuide: onGuide }),
+        React.createElement("button", { onClick: onComplete, style: {
+                width: "100%", padding: "16px", borderRadius: 14, border: "none", cursor: "pointer",
+                background: "linear-gradient(135deg, #E65100, #7B4BBF)",
+                color: "#fff", fontSize: 16, fontWeight: 800,
+                boxShadow: "0 4px 16px rgba(230,81,0,0.3)", marginTop: 8,
+            } }, "Complete Evening Session \u2713")));
 }
 function WeeklyPage({ data, setData, onGuide }) {
     const s = k => v => setData(d => (Object.assign(Object.assign({}, d), { [k]: v })));
@@ -994,7 +1073,15 @@ function App() {
     const [mode, setMode, modeLoaded] = useStorage("user:mode", null);
     const [userWhy, setUserWhy, whyLoaded] = useStorage("user:why", "");
     const [tab, setTab] = useState("onboarding");
+    const [completedSession, setCompletedSession] = useState(null);
     const { stats, loaded: streakLoaded, refresh: refreshStreak, addFreeze } = useStreak();
+    const contentRef = useRef(null);
+    // Scroll to top on tab change
+    useEffect(() => {
+        if (contentRef.current)
+            contentRef.current.scrollTop = 0;
+        window.scrollTo(0, 0);
+    }, [tab, completedSession]); // eslint-disable-line
     // Once mode loads, decide starting tab
     useEffect(() => {
         if (modeLoaded && mode !== null)
@@ -1020,6 +1107,14 @@ function App() {
     };
     const handleChangeWhy = (why) => {
         setUserWhy(why);
+    };
+    const handleComplete = (session) => {
+        refreshStreak();
+        setCompletedSession(session);
+    };
+    const handleNextSession = (nextTab) => {
+        setCompletedSession(null);
+        setTab(nextTab);
     };
     const tabs = [
         { id: "intro", emoji: "🏠", label: "Home", color: "#7B4BBF" },
@@ -1071,14 +1166,16 @@ function App() {
                     } },
                     React.createElement("span", { style: { fontSize: 18 } }, t.emoji),
                     React.createElement("span", { style: { fontSize: 15, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: tab === t.id ? t.color : "#BDBDBD" } }, t.label)))))),
-            React.createElement("div", { style: { flex: 1, padding: "20px 16px 80px" } },
-                tab === "intro" && React.createElement(IntroPage, { onStart: () => setTab("morning"), mode: mode, onChangeMode: handleChangeMode, stats: stats, userWhy: userWhy, onChangeWhy: handleChangeWhy, onGoToMorning: () => setTab("morning") }),
-                tab === "morning" && React.createElement(MorningPage, { data: morning, setData: setMorning, onGuide: () => setTab("reference"), mode: mode }),
-                tab === "midday" && React.createElement(MiddayPage, { data: midday, setData: setMidday, onGuide: () => setTab("reference") }),
-                tab === "evening" && React.createElement(EveningPage, { data: evening, setData: setEvening, onGuide: () => setTab("reference"), mode: mode }),
-                tab === "weekly" && React.createElement(WeeklyPage, { data: weekly, setData: setWeekly, onGuide: () => setTab("reference") }),
-                tab === "archive" && React.createElement(ArchivePage, null),
-                tab === "reference" && React.createElement(ReferencePage, null)),
+            React.createElement("div", { ref: contentRef, style: { flex: 1, padding: "20px 16px 80px", overflowY: "auto" } }, completedSession
+                ? React.createElement(SessionComplete, { session: completedSession, stats: stats, onNext: () => handleNextSession(SESSION_COMPLETE[completedSession].next), onHome: () => { setCompletedSession(null); setTab("intro"); } })
+                : React.createElement(React.Fragment, null,
+                    tab === "intro" && React.createElement(IntroPage, { onStart: () => setTab("morning"), mode: mode, onChangeMode: handleChangeMode, stats: stats, userWhy: userWhy, onChangeWhy: handleChangeWhy, onGoToMorning: () => setTab("morning") }),
+                    tab === "morning" && React.createElement(MorningPage, { data: morning, setData: setMorning, onGuide: () => setTab("reference"), mode: mode, onComplete: () => handleComplete("morning") }),
+                    tab === "midday" && React.createElement(MiddayPage, { data: midday, setData: setMidday, onGuide: () => setTab("reference"), onComplete: () => handleComplete("midday") }),
+                    tab === "evening" && React.createElement(EveningPage, { data: evening, setData: setEvening, onGuide: () => setTab("reference"), mode: mode, onComplete: () => handleComplete("evening") }),
+                    tab === "weekly" && React.createElement(WeeklyPage, { data: weekly, setData: setWeekly, onGuide: () => setTab("reference") }),
+                    tab === "archive" && React.createElement(ArchivePage, null),
+                    tab === "reference" && React.createElement(ReferencePage, null))),
             React.createElement("div", { style: { background: "#fff", borderTop: "1px solid #F0F0F0", padding: "10px 20px", textAlign: "center" } },
                 React.createElement("p", { style: { fontSize: 13, color: "#555" } }, "Entries save automatically \u00B7 Past days viewable in Archive")))));
 }
