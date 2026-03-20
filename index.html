@@ -606,17 +606,19 @@ function SessionComplete({ session, stats, onNext, onHome }) {
                         } }, done && React.createElement("span", { style: { color: "#fff", fontSize: 13 } }, "\u2713")),
                     React.createElement("span", { style: { fontSize: 10, color: isToday ? "#7B4BBF" : "#AAAAAA", fontWeight: isToday ? 700 : 400 } }, dayNames[d.getDay()])));
             }))),
-        React.createElement("button", { onClick: onNext, style: {
+        session !== "evening" && (React.createElement("button", { onClick: onNext, style: {
                 width: "100%", padding: "16px", borderRadius: 14, border: "none", cursor: "pointer",
                 background: `linear-gradient(135deg, ${cfg.color}, #1565C0)`,
                 color: "#fff", fontSize: 16, fontWeight: 800,
                 boxShadow: `0 4px 16px ${cfg.color}44`, marginBottom: 12,
             } },
             cfg.nextLabel,
-            " \u2192"),
+            " \u2192")),
         React.createElement("button", { onClick: onHome, style: {
-                width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E8E8E8",
-                cursor: "pointer", background: "#fff", color: "#555", fontSize: 15, fontWeight: 700,
+                width: "100%", padding: session === "evening" ? "16px" : "14px", borderRadius: 14,
+                border: session === "evening" ? "none" : "2px solid #E8E8E8",
+                background: session === "evening" ? `linear-gradient(135deg, ${cfg.color}, #7B4BBF)` : "#fff",
+                cursor: "pointer", color: session === "evening" ? "#fff" : "#555", fontSize: session === "evening" ? 16 : 15, fontWeight: 700,
             } }, "Back to Home")));
 }
 function OnboardingPage({ onChoose }) {
