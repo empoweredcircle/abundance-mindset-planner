@@ -1176,8 +1176,6 @@ function App() {
     const contentRef = useRef(null);
     // Scroll to top on tab change
     useEffect(() => {
-        if (contentRef.current)
-            contentRef.current.scrollTop = 0;
         window.scrollTo(0, 0);
     }, [tab, completedSession]); // eslint-disable-line
     // Once mode loads, decide starting tab
@@ -1247,7 +1245,7 @@ function App() {
         textarea::placeholder { color: #AAAAAA; font-size: 15px; }
         button { font-family: 'DM Sans', sans-serif; }
       `),
-        React.createElement("div", { style: { maxWidth: 480, margin: "0 auto", minHeight: "100vh", display: "flex", flexDirection: "column" } },
+        React.createElement("div", { style: { maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column" } },
             React.createElement("div", { style: { background: "#fff", padding: "16px 20px 0", boxShadow: "0 1px 0 #EEEEEE", position: "sticky", top: 0, zIndex: 100 } },
                 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 } },
                     React.createElement("div", null,
@@ -1264,7 +1262,7 @@ function App() {
                     } },
                     React.createElement("span", { style: { fontSize: 18 } }, t.emoji),
                     React.createElement("span", { style: { fontSize: 15, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: tab === t.id ? t.color : "#BDBDBD" } }, t.label)))))),
-            React.createElement("div", { ref: contentRef, style: { flex: 1, padding: "20px 16px 80px", overflowY: "auto" } }, completedSession
+            React.createElement("div", { ref: contentRef, style: { flex: 1, padding: "20px 16px 80px" } }, completedSession
                 ? React.createElement(SessionComplete, { session: completedSession, stats: stats, onNext: () => handleNextSession(SESSION_COMPLETE[completedSession].next), onHome: () => { setCompletedSession(null); setTab("intro"); } })
                 : React.createElement(React.Fragment, null,
                     tab === "intro" && React.createElement(IntroPage, { onStart: () => setTab("morning"), mode: mode, onChangeMode: handleChangeMode, stats: stats, userWhy: userWhy, onChangeWhy: handleChangeWhy, onGoToMorning: () => setTab("morning") }),
